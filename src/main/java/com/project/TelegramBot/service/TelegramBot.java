@@ -1,25 +1,19 @@
 package com.project.TelegramBot.service;
 
 import com.project.TelegramBot.config.BotConfig;
-import com.project.TelegramBot.model.User;
-import com.project.TelegramBot.model.UserRepository;
 import com.vdurmont.emoji.EmojiParser;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.autoconfigure.cache.CacheAutoConfiguration;
 import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
 import org.telegram.telegrambots.meta.api.methods.commands.SetMyCommands;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
-import org.telegram.telegrambots.meta.api.objects.Chat;
-import org.telegram.telegrambots.meta.api.objects.Message;
 import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.api.objects.commands.BotCommand;
 import org.telegram.telegrambots.meta.api.objects.commands.scope.BotCommandScopeDefault;
-import org.telegram.telegrambots.meta.api.objects.replykeyboard.ReplyKeyboardMarkup;
-import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.KeyboardRow;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 
-import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -28,7 +22,10 @@ import java.util.List;
 public class TelegramBot extends TelegramLongPollingBot {
 
     @Autowired
-    private UserRepository userRepository;
+    private UserService userService;
+
+    @Autowired
+    private JokeService jokeService;
 
     final BotConfig config;
 
@@ -39,10 +36,11 @@ public class TelegramBot extends TelegramLongPollingBot {
         this.config = config;
         List<BotCommand> listOfCommands = new ArrayList<>();
         listOfCommands.add(new BotCommand("/start", "get a welcome message"));
-        listOfCommands.add(new BotCommand("/mydata", "get your data stored"));
+        listOfCommands.add(new BotCommand("/mydata", "show your data"));
         listOfCommands.add(new BotCommand("/deletedata", "delete your data"));
         listOfCommands.add(new BotCommand("/help", "info about the bot"));
         listOfCommands.add(new BotCommand("/settings", "set your preferences"));
+        listOfCommands.add(new BotCommand("/joke", "get a joke"));
         try {
             execute(new SetMyCommands(listOfCommands, new BotCommandScopeDefault(), null));
         } catch (TelegramApiException e) {
@@ -63,11 +61,21 @@ public class TelegramBot extends TelegramLongPollingBot {
             switch (messageText) {
                 case "/start":
 
-                    registerUser(update.getMessage());
+                    userService.registerUser(update.getMessage());
                     startCommandReceived(chatId, update.getMessage().getChat().getFirstName());
                     break;
                 case "/help":
                     sendMessage(chatId, HELP_TEXT);
+                    break;
+                case "/joke":
+                    sendMessage(chatId, jokeService.getJoke());
+                    break;
+                case "/deletedata":
+                    userService.deleteUser(update.getMessage());
+                    sendMessage(chatId, "Deleted your data");
+                    break;
+                case "/mydata":
+                    sendMessage(chatId, userService.getUserInfo(update.getMessage()).toString());
                     break;
                 default:
                     sendMessage(chatId, "Sorry, command not recognized");
@@ -78,28 +86,7 @@ public class TelegramBot extends TelegramLongPollingBot {
 
     }
 
-    private void registerUser(Message message) {
 
-        if(userRepository.findById(message.getChatId()).isEmpty()) {
-
-            Long chatId = message.getChatId();
-            Chat chat = message.getChat();
-
-            User user = new User();
-
-            user.setChatId(chatId);
-            user.setFirstName(chat.getFirstName());
-            user.setLastName(chat.getLastName());
-            user.setUsername(chat.getUserName());
-            user.setRegisteredAt(new Timestamp(System.currentTimeMillis()));
-
-            userRepository.save(user);
-
-
-        }
-
-
-    }
 
     private void startCommandReceived(long chatId, String name){
 
@@ -116,27 +103,7 @@ public class TelegramBot extends TelegramLongPollingBot {
         message.setChatId(String.valueOf(chatId));
         message.setText(textToSend);
 
-        ReplyKeyboardMarkup keyboardMarkup = new ReplyKeyboardMarkup();
 
-        List<KeyboardRow> keyboardRows = new ArrayList<>();
-        KeyboardRow row = new KeyboardRow();
-
-        row.add("weather");
-        row.add("joke");
-
-        keyboardRows.add(row);
-
-        row = new KeyboardRow();
-
-        row.add("register");
-        row.add("chack my data");
-        row.add("delete my data");
-
-        keyboardRows.add(row);
-
-        keyboardMarkup.setKeyboard(keyboardRows);
-
-        message.setReplyMarkup(keyboardMarkup);
 
         try {
             execute(message);

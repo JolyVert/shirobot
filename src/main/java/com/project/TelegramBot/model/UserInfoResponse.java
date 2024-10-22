@@ -1,36 +1,25 @@
 package com.project.TelegramBot.model;
 
 import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.Id;
-import jakarta.persistence.Table;
 
 import java.sql.Timestamp;
 
-@Entity
-@Table(name = "users")
-public class User {
+public class UserInfoResponse {
 
-    @Id
-    private Long chatId;
 
-    @Column
     private String firstName;
-    @Column
+
     private String lastName;
-    @Column
+
     private String username;
-    @Column
-    private String location;
-    @Column
+
     private Timestamp registeredAt;
 
-    public Long getChatId() {
-        return chatId;
-    }
-
-    public void setChatId(Long chatId) {
-        this.chatId = chatId;
+    public UserInfoResponse(String firstName, String lastName, String username, Timestamp registeredAt) {
+        this.firstName = firstName;
+        this.lastName = lastName;
+        this.username = username;
+        this.registeredAt = registeredAt;
     }
 
     public String getFirstName() {
@@ -57,15 +46,19 @@ public class User {
         this.username = username;
     }
 
-    public String getLocation() {return location;}
-
-    public void setLocation(String location) {this.location = location;}
-
     public Timestamp getRegisteredAt() {
         return registeredAt;
     }
 
     public void setRegisteredAt(Timestamp registeredAt) {
         this.registeredAt = registeredAt;
+    }
+
+    @Override
+    public String toString() {
+        return "First name: " + firstName + '\n' +
+                "Last name: " + lastName + '\n' +
+                "Username: " + username + '\n' +
+                "Registered at: " + registeredAt;
     }
 }
